@@ -1,0 +1,58 @@
+//@version=6
+strategy("Alternative Forex Model (EUR/USD) with Economic Indicators", overlay=true)
+
+// === Inputs ===
+// GDP growth rates
+us_gdp_growth = input.float(title="US GDP Growth Rate (%)", defval=2.5) / 100
+eu_gdp_growth = input.float(title="EU GDP Growth Rate (%)", defval=1.5) / 100
+
+// PMI (Purchasing Managers' Index)
+us_pmi = input.float(title="US PMI", defval=55.0)
+eu_pmi = input.float(title="EU PMI", defval=50.0)
+
+// Economic sentiment indices
+us_sentiment = input.float(title="US Economic Sentiment Index", defval=70.0)
+eu_sentiment = input.float(title="EU Economic Sentiment Index", defval=65.0)
+
+// Inflation rates
+us_inflation = input.float(title="US Inflation Rate (%)", defval=3.0) / 100
+eu_inflation = input.float(title="EU Inflation Rate (%)", defval=2.5) / 100
+
+// Historical data
+ma_200 = ta.sma(close, 200)  // 200-period Simple Moving Average
+ma_400 = ta.sma(close, 400)  // 400-period Simple Moving Average
+historical_base_price = (ma_200 + ma_400) / 2  // Average of 200- and 400-period SMA
+
+// === Calculations ===
+// Inflation differential
+inflation_diff = us_inflation - eu_inflation
+
+// GDP growth differential
+gdp_growth_diff = us_gdp_growth - eu_gdp_growth
+
+// PMI differential
+pmi_diff = (us_pmi - eu_pmi) / 100
+
+// Sentiment differential
+sentiment_diff = (us_sentiment - eu_sentiment) / 100
+
+// Initial PPP calculation
+initial_ppp = 1.10  // Initial PPP value at a reference point
+calculated_ppp = initial_ppp * (1 + inflation_diff)
+
+// PPP adjusted for GDP growth differential
+adjusted_ppp_gdp = calculated_ppp * (1 + gdp_growth_diff)
+
+// PPP adjusted for PMI differential
+adjusted_ppp_pmi = adjusted_ppp_gdp * (1 + pmi_diff)
+
+// PPP adjusted for economic sentiment
+final_adjusted_ppp = adjusted_ppp_pmi * (1 + sentiment_diff)
+
+// === Plotting ===
+plot(close, color=color.green, title="Current EUR/USD")  // Current EUR/USD price
+plot(final_adjusted_ppp, color=color.blue, title="Final Adjusted PPP with Economic Indicators")  // Final adjusted PPP
+
+// === Alerts for Significant Deviations ===
+deviation = (close - final_adjusted_ppp) / final_adjusted_ppp * 100
+alertcondition(math.abs(deviation) > 10, title="Significant Deviation Alert", message="EUR/USD price deviates significantly from the final adjusted PPP.")
